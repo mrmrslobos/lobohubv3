@@ -1,0 +1,7 @@
+{
+  "name": "Lobo Family Planning",
+  "description": "A sophisticated self-hosted family organization system featuring a unified dashboard, collaborative calendar, task management, shopping lists, and budget tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
