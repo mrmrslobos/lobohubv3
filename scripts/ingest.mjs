@@ -38,7 +38,8 @@ const sql = neon(DATABASE_URL);
 
 const CHUNK_SIZE = 1200;
 const CHUNK_OVERLAP = 150;
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'gemini-embedding-2';
+const EMBEDDING_DIMENSIONS = 768; // must match the `vector(768)` column in migrations/0001_init.sql
 
 function toVectorLiteral(embedding) {
   return `[${embedding.join(',')}]`;
@@ -89,6 +90,7 @@ async function embedBatch(texts) {
             model: `models/${EMBEDDING_MODEL}`,
             content: { parts: [{ text: texts[i] }] },
             taskType: 'RETRIEVAL_DOCUMENT',
+            outputDimensionality: EMBEDDING_DIMENSIONS,
           }),
         }
       );
