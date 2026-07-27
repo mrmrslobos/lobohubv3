@@ -12,7 +12,8 @@
     "seed:library": "node --env-file=.env.local scripts/seed-library.mjs"
   },
   "dependencies": {
-    "@fontsource/sora": "^5.3.0",
+    "@fontsource/geist-sans": "^5.3.0",
+    "@fontsource/source-serif-4": "^5.3.0",
     "@neondatabase/serverless": "^0.10.4",
     "bcryptjs": "^2.4.3",
     "cookie": "^0.7.2",

@@ -50,25 +50,25 @@ const Library: React.FC = () => {
     <div>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ink-100">Library</h1>
-          <p className="text-sm text-ink-400">
+          <h1 className="font-serif text-[22px] font-semibold tracking-tight text-ink-100">Library</h1>
+          <p className="mt-0.5 text-[13px] text-ink-400">
             {docs.length === 0
               ? 'No documents registered yet — run `npm run seed:library` to populate the catalog.'
               : `${totalIngested} of ${docs.length} documents ready for guidance search.`}
           </p>
         </div>
         <div className="relative w-full max-w-xs">
-          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search the library…"
-            className="w-full rounded-full bg-ink-900 py-2 pl-9 pr-3 text-sm text-ink-100 outline-none placeholder:text-ink-400"
+            className="w-full rounded-lg border border-hair bg-ink-900 py-2 pl-9 pr-3 text-[13px] text-ink-100 outline-none placeholder:text-ink-500 focus:border-hair-strong"
           />
         </div>
       </div>
 
-      {loading && <p className="text-sm text-ink-400">Loading…</p>}
+      {loading && <p className="text-[13px] text-ink-400">Loading…</p>}
 
       {!loading &&
         (Object.keys(CATEGORY_META) as DocumentCategory[]).map((category) => {
@@ -76,29 +76,32 @@ const Library: React.FC = () => {
           if (items.length === 0) return null;
           const meta = CATEGORY_META[category];
           return (
-            <section key={category} className="mb-8">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-400">
-                <meta.Icon className="h-4 w-4" />
+            <section key={category} className="mb-7">
+              <h2 className="mb-2.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.09em] text-ink-500">
+                <meta.Icon className="h-3.5 w-3.5" />
                 {meta.label}
-                <span className="text-ink-400/60">({items.length})</span>
+                <span className="tabular-nums">({items.length})</span>
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((doc) => (
-                  <div key={doc.id} className="rounded-2xl bg-ink-900 p-4 shadow-lg shadow-black/20">
+                  <div
+                    key={doc.id}
+                    className="rounded-lg border border-hair bg-ink-900 p-3 transition-colors hover:border-hair-strong"
+                  >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug text-ink-100">{doc.title}</p>
+                      <p className="text-[13px] font-medium leading-snug text-ink-100">{doc.title}</p>
                       <span
-                        className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          doc.ingested ? 'text-good' : 'text-ink-400'
+                        className={`flex shrink-0 items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.05em] ${
+                          doc.ingested ? 'text-good' : 'text-ink-500'
                         }`}
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${doc.ingested ? 'bg-good' : 'bg-ink-400'}`} />
+                        <span className={`h-1.5 w-1.5 rounded-full ${doc.ingested ? 'bg-good' : 'bg-ink-500'}`} />
                         {doc.ingested ? 'Ready' : 'Pending'}
                       </span>
                     </div>
-                    {doc.abbreviation && <p className="mt-1 text-xs text-ink-400">{doc.abbreviation}</p>}
+                    {doc.abbreviation && <p className="mt-1 text-[11px] text-ink-500">{doc.abbreviation}</p>}
                     {doc.ingested && (
-                      <p className="mt-2 text-[11px] text-ink-400/70">
+                      <p className="mt-1.5 text-[11px] tabular-nums text-ink-500">
                         {doc.chunk_count} passages{doc.page_count ? ` · ${doc.page_count} pages` : ''}
                       </p>
                     )}
