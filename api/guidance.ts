@@ -3,8 +3,8 @@
 // pgvector similarity search on Neon, and asks Gemini to answer grounded in
 // what was actually retrieved. GEMINI_API_KEY stays server-side.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, toVectorLiteral } from '../lib/db';
-import { getSessionUser } from '../lib/auth';
+import { sql, toVectorLiteral } from '../lib/db.js';
+import { getSessionUser } from '../lib/auth.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const EMBEDDING_MODEL = 'text-embedding-004';

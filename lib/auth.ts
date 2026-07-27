@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'node:crypto';
 import { parse, serialize } from 'cookie';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { sql } from './db';
+import { sql } from './db.js';
 
 const COOKIE_NAME = 'berea_session';
 const SESSION_DAYS = 30;
