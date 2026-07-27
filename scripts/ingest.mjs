@@ -134,7 +134,8 @@ async function upsertDocument(row) {
   const rows = await sql`
     insert into documents (category, title, abbreviation, translation, page_count, ingested, chunk_count)
     values (${row.category}, ${row.title}, ${row.abbreviation}, ${row.translation}, ${row.page_count}, false, 0)
-    on conflict (category, abbreviation) do update set page_count = excluded.page_count
+    on conflict (category, abbreviation) where abbreviation is not null
+    do update set page_count = excluded.page_count
     returning id, title, abbreviation
   `;
   return rows[0];

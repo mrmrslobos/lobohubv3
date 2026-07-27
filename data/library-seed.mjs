@@ -124,6 +124,7 @@ export const KNOWN_EGW_TITLES = {
   '1TT': 'Testimonies for the Church (bound edition), vol. 1',
   '2TT': 'Testimonies for the Church (bound edition), vol. 2',
   '3TT': 'Testimonies for the Church (bound edition), vol. 3',
+  '1SG': 'Spiritual Gifts, vol. 1',
   '2SG': 'Spiritual Gifts, vol. 2',
   '3SG': 'Spiritual Gifts, vol. 3',
   '4bSG': 'Spiritual Gifts, vol. 4b',
