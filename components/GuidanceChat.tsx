@@ -90,17 +90,17 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
     <div className="flex h-full flex-col">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ask for Guidance</h1>
-          <p className="text-sm text-stone-400">
+          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-100">Ask for Guidance</h1>
+          <p className="text-sm text-ink-400">
             Ask as an elder — Berea answers grounded in Scripture, Ellen White's writings, and the Church Manual.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-stone-400">
+        <div className="flex items-center gap-2 text-xs text-ink-400">
           <span>Translation</span>
           <select
             value={translation}
             onChange={(e) => setTranslation(e.target.value as (typeof TRANSLATIONS)[number])}
-            className="rounded-lg border border-stone-700 bg-stone-900 px-2 py-1.5 text-stone-100 outline-none focus:border-berea-500"
+            className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-ink-100 outline-none focus:border-gold"
           >
             {TRANSLATIONS.map((t) => (
               <option key={t} value={t}>
@@ -111,14 +111,14 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
         </div>
       </div>
 
-      <div className="mb-4 rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-xs text-amber-200/80">
+      <div className="mb-4 rounded-lg border border-banner-line bg-banner-bg px-4 py-3 text-xs text-banner-ink">
         Berea is a study companion, not a substitute for your pastor. In situations involving abuse, self-harm, or
         immediate danger, please contact emergency services and your conference pastoral care line directly.
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl border border-stone-800 bg-stone-900/50 p-4">
+      <div className="flex-1 space-y-4 overflow-y-auto rounded-lg border border-ink-600 bg-ink-800/40 p-4">
         {messages.length === 0 && (
-          <div className="flex h-full flex-col items-center justify-center text-center text-stone-500">
+          <div className="flex h-full flex-col items-center justify-center text-center text-ink-400">
             <span className="mb-3 text-4xl">📖</span>
             <p className="max-w-sm text-sm">
               Ask something like "How should I counsel a member struggling with doubt about the Sabbath?" or
@@ -130,21 +130,23 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-2xl rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                m.role === 'user' ? 'bg-berea-600 text-white' : 'bg-stone-800 text-stone-100'
+              className={`max-w-2xl rounded-lg px-4 py-3 text-sm leading-relaxed ${
+                m.role === 'user'
+                  ? 'bg-gold text-gold-on'
+                  : 'border border-ink-600 bg-ink-800 text-ink-200'
               }`}
             >
               <p className="whitespace-pre-wrap">{m.content}</p>
               {m.citations && m.citations.length > 0 && (
-                <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Sources</p>
+                <div className="mt-3 space-y-1.5 border-t border-ink-700 pt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-400">Sources</p>
                   {m.citations.slice(0, 5).map((c, i) => (
-                    <div key={i} className="text-xs text-stone-400">
-                      <span className="font-semibold text-berea-400">
+                    <div key={i} className="text-xs text-ink-400">
+                      <span className="font-semibold italic text-rubric">
                         {c.abbreviation ?? c.title}
                         {c.page ? `, p. ${c.page}` : ''}
                       </span>{' '}
-                      <span className="text-stone-500">— {CATEGORY_LABEL[c.category]}</span>
+                      <span className="text-ink-400/70">— {CATEGORY_LABEL[c.category]}</span>
                     </div>
                   ))}
                 </div>
@@ -155,7 +157,9 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
 
         {sending && (
           <div className="flex justify-start">
-            <div className="rounded-2xl bg-stone-800 px-4 py-3 text-sm text-stone-400">Searching the library…</div>
+            <div className="rounded-lg border border-ink-600 bg-ink-800 px-4 py-3 text-sm text-ink-400">
+              Searching the library…
+            </div>
           </div>
         )}
 
@@ -176,12 +180,12 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
           }}
           rows={2}
           placeholder="Type your question…"
-          className="flex-1 resize-none rounded-xl border border-stone-700 bg-stone-900 px-4 py-3 text-sm text-stone-100 outline-none focus:border-berea-500"
+          className="flex-1 resize-none rounded-lg border border-ink-600 bg-ink-800 px-4 py-3 text-sm text-ink-100 outline-none focus:border-gold"
         />
         <button
           onClick={handleSend}
           disabled={sending || !input.trim()}
-          className="rounded-xl bg-berea-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-berea-500 disabled:opacity-50"
+          className="rounded-lg bg-gold px-5 py-3 text-sm font-semibold text-gold-on transition hover:bg-gold-dark disabled:opacity-50"
         >
           Send
         </button>
