@@ -27,10 +27,15 @@ pastoral system prompt. The answer quotes and cites what it actually found.
   does, so `lib/auth.ts` + `api/auth/*` implement a deliberately small one.
 - **AI** — Gemini `gemini-embedding-2` for embeddings, `gemini-2.5-flash` for answers. Both run
   inside `api/guidance.ts` — the Gemini key never reaches the browser.
-- **Ingestion** — a local Node script (`npm run ingest`) that extracts text from your PDFs,
-  chunks it, embeds each chunk, and upserts it into Neon. This runs on your machine (or CI), not
-  in the deployed app, since processing ~100 books is a one-time, API-cost-bearing job you should
-  control directly.
+- **Ingestion** — two ways to get a PDF's text into Neon:
+  1. **The Admin page** (`components/Admin.tsx`, visible to `role = 'admin'` users) — upload a PDF
+     in the browser. Text extraction happens client-side via `pdfjs-dist` (dynamically imported,
+     so it never bloats the bundle for regular elders), and only small batches of already-chunked
+     text are sent to `api/admin/ingest-batch` for embedding — never the raw PDF, since Vercel
+     functions cap request bodies well under the size of some of these books.
+  2. **`npm run ingest`**, a local Node script that does the same extract/chunk/embed pipeline
+     from the command line — useful for bulk-loading the ~100-volume EGW library in one go
+     rather than one upload at a time.
 
 ## 1. Create the Neon database
 
@@ -62,44 +67,54 @@ npm run dev
 ```
 
 Sign up with an email/password (and the invite code) from the app UI — the first user isn't
-special; promote yourself to `role = 'admin'` directly in the `users` table later if you want an
-admin marker.
+special. To use the Admin upload page, promote yourself afterward:
+
+```sql
+update users set role = 'admin' where email = 'you@example.com';
+```
+(Run that in the Neon SQL Editor, or via `psql`.)
 
 ## 3. Populate the library
 
 Berea already knows the catalog of your Google Drive library (KJV, NLT, ESV, the Church Manual,
-and ~100 Ellen G. White volumes) — see [`data/library-seed.mjs`](data/library-seed.mjs). Two
-steps get it fully searchable:
+and ~100 Ellen G. White volumes) — see [`data/library-seed.mjs`](data/library-seed.mjs).
 
-**a. Register the catalog** (instant, no PDFs needed yet — populates the Library page):
+**a. Register the catalog** (instant, no PDFs needed yet — populates the Library and Admin
+pages). Either click **Refresh catalog** on the Admin page once you're signed in as an admin, or:
 
 ```sh
 npm run seed:library
 ```
 
-**b. Ingest the actual text** (this is what makes guidance answers grounded):
+**b. Ingest the actual text** (this is what makes guidance answers grounded) — two options:
 
-1. Download the PDFs from Drive into a local folder shaped like this — Drive lets you download
-   an entire folder as a zip ("Download" on the folder), then unzip and sort into:
-   ```
-   library/
-     bible/    # kjv.pdf, New-Living-Translation-NLT.pdf, English Standard Version.pdf
-     egw/      # en_DA.pdf, en_GC.pdf, en_PP.pdf, ... (all the Ellen G. White volumes)
-     manual/   # Seventh-day_Adventist_Church_Manual-*.pdf
-   ```
-2. Run:
-   ```sh
-   npm run ingest
-   ```
-   This walks each folder, extracts text page-by-page, chunks it (~1200 characters with
-   overlap), embeds every chunk with Gemini, and stores it in `document_chunks`. It's safe to
-   re-run — already-ingested documents are skipped unless you pass `--force`. Expect this to
-   take a while and to consume Gemini API quota given the size of the library; ingest a few
-   books first (e.g. just `library/bible` and `library/manual`) to confirm everything works
-   end-to-end before running the full ~100-volume set.
+- **In the app** (no terminal needed): sign in as an admin, open the **Admin** page in the
+  sidebar, and click **Upload PDF** next to any book. Keep the tab open while it processes —
+  extraction and chunking happen in your browser, then it's embedded and stored in batches.
+  Re-uploading a "Ready" book replaces its existing content. Good for adding one book at a time,
+  or for whoever's setting this up if they'd rather not touch Node/npm at all.
+- **From the command line**, for bulk-loading the whole library in one go: download the PDFs
+  from Drive into a local folder shaped like this — Drive lets you download an entire folder as
+  a zip ("Download" on the folder), then unzip and sort into:
+  ```
+  library/
+    bible/    # kjv.pdf, New-Living-Translation-NLT.pdf, English Standard Version.pdf
+    egw/      # en_DA.pdf, en_GC.pdf, en_PP.pdf, ... (all the Ellen G. White volumes)
+    manual/   # Seventh-day_Adventist_Church_Manual-*.pdf
+  ```
+  then run:
+  ```sh
+  npm run ingest
+  ```
+  This walks each folder, extracts text page-by-page, chunks it (~1200 characters with
+  overlap), embeds every chunk with Gemini, and stores it in `document_chunks`. It's safe to
+  re-run — already-ingested documents are skipped unless you pass `--force`. Expect this to
+  take a while and to consume Gemini API quota given the size of the library; ingest a few
+  books first (e.g. just `library/bible` and `library/manual`) to confirm everything works
+  end-to-end before running the full ~100-volume set.
 
-Once ingestion finishes for a document, it flips to "Ready" on the Library page and its passages
-become searchable from the guidance chat.
+Either way, once ingestion finishes for a document, it flips to "Ready" on the Library and Admin
+pages and its passages become searchable from the guidance chat.
 
 ## 4. Deploy to Vercel
 

@@ -5,6 +5,7 @@ import Auth from './components/Auth';
 import GuidanceChat from './components/GuidanceChat';
 import Library from './components/Library';
 import History from './components/History';
+import Admin from './components/Admin';
 
 const MainContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -40,6 +41,8 @@ const MainContent: React.FC = () => {
         return <Library />;
       case 'history':
         return <History onSelect={goToConversation} />;
+      case 'admin':
+        return user.role === 'admin' ? <Admin /> : null;
       default:
         return null;
     }
