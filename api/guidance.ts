@@ -11,6 +11,10 @@ const EMBEDDING_MODEL = 'gemini-embedding-2';
 const EMBEDDING_DIMENSIONS = 768; // must match the `vector(768)` column in migrations/0001_init.sql
 const GENERATION_MODEL = 'gemini-2.5-flash';
 
+// Kept as an even number so a fixed-size window always lands on a
+// user/assistant pair boundary (each turn inserts exactly one of each).
+const HISTORY_MESSAGE_LIMIT = 10;
+
 const SYSTEM_PROMPT = `You are Berea, a study companion mentoring a local Seventh-day Adventist \
 church elder. You answer with the warmth, patience, and doctrinal grounding of an experienced \
 SDA pastor, but you are not a substitute for one — you say so plainly when a situation calls for \
@@ -23,6 +27,8 @@ writings, and/or the SDA Church Manual). Quote briefly and cite the source inlin
 - If the provided excerpts don't cover the question, say so honestly rather than inventing a \
 citation. You may still offer general biblical wisdom, but flag clearly what is and isn't \
 sourced from the retrieved material.
+- If this question follows earlier turns in the conversation, treat it as a continuation — refer \
+back to what was already discussed rather than starting over as if it were a fresh question.
 - Write for a lay elder giving counsel to church members: practical, pastoral, non-academic. \
 Prefer a few well-chosen sources over an exhaustive list.
 - Represent mainstream Seventh-day Adventist doctrine and Church Manual policy faithfully. Where \
@@ -45,6 +51,16 @@ interface MatchRow {
   category: 'bible' | 'egw' | 'manual';
 }
 
+interface HistoryRow {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface GeminiContent {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
 async function embed(text: string): Promise<number[]> {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${GEMINI_API_KEY}`,
@@ -64,14 +80,15 @@ async function embed(text: string): Promise<number[]> {
   return json.embedding.values as number[];
 }
 
-async function generate(prompt: string): Promise<string> {
+async function generate(systemInstruction: string, contents: GeminiContent[]): Promise<string> {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GENERATION_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
         generationConfig: { temperature: 0.4 },
       }),
     }
@@ -96,14 +113,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const trimmedQuestion = typeof question === 'string' ? question.trim() : '';
     if (!trimmedQuestion) return res.status(400).json({ error: 'question is required' });
 
+    let history: HistoryRow[] = [];
     if (conversationId) {
       const owned = await sql`
         select id from conversations where id = ${conversationId} and user_id = ${user.id} limit 1
       `;
       if (owned.length === 0) return res.status(404).json({ error: 'Conversation not found' });
+
+      const recent = await sql`
+        select role, content from messages
+        where conversation_id = ${conversationId}
+        order by created_at desc
+        limit ${HISTORY_MESSAGE_LIMIT}
+      `;
+      history = (recent as HistoryRow[]).reverse();
     }
 
-    const queryEmbedding = await embed(trimmedQuestion);
+    // Fold the most recent user turn into the retrieval query so a short
+    // follow-up ("what about for children specifically?") still searches on
+    // the right topic instead of just those few words on their own.
+    const lastUserTurn = [...history].reverse().find((m) => m.role === 'user');
+    const retrievalQuery = lastUserTurn ? `${lastUserTurn.content} ${trimmedQuestion}` : trimmedQuestion;
+
+    const queryEmbedding = await embed(retrievalQuery);
     const vectorLiteral = toVectorLiteral(queryEmbedding);
 
     const matches = (await sql`
@@ -133,11 +165,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .join('\n\n')
       : '(No matching excerpts were found in the library for this question.)';
 
-    const prompt = `${SYSTEM_PROMPT}
-
-The elder's preferred Bible translation is ${preferredTranslation}; use it when quoting Scripture \
-if a matching excerpt is in that translation, otherwise use whatever translation the excerpt is in \
-and say which one.
+    const finalTurnText = `The elder's preferred Bible translation is ${preferredTranslation}; use it when \
+quoting Scripture if a matching excerpt is in that translation, otherwise use whatever translation the \
+excerpt is in and say which one.
 
 RETRIEVED EXCERPTS:
 ${sourceBlock}
@@ -147,7 +177,15 @@ ${trimmedQuestion}
 
 Respond now, grounded in the excerpts above.`;
 
-    const answer = await generate(prompt);
+    const contents: GeminiContent[] = [
+      ...history.map((m) => ({
+        role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
+        parts: [{ text: m.content }],
+      })),
+      { role: 'user', parts: [{ text: finalTurnText }] },
+    ];
+
+    const answer = await generate(SYSTEM_PROMPT, contents);
 
     const citations = matches.map((r) => ({
       documentId: r.document_id,
