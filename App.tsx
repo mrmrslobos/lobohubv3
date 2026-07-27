@@ -10,6 +10,7 @@ const MainContent: React.FC = () => {
   const { user, loading } = useAuth();
   const [view, setView] = useState<View>('guidance');
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
@@ -52,10 +53,24 @@ const MainContent: React.FC = () => {
           if (v === 'guidance' && view !== 'guidance') setConversationId(null);
           setView(v);
         }}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="mx-auto h-full max-w-5xl">{renderView()}</div>
-      </main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-ink-600 bg-ink-950 px-4 py-3 md:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            className="rounded-lg p-1.5 text-ink-200 hover:bg-ink-800"
+          >
+            <span className="block text-xl leading-none">☰</span>
+          </button>
+          <span className="font-serif text-lg font-semibold text-ink-100">Berea</span>
+        </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="mx-auto h-full max-w-5xl">{renderView()}</div>
+        </main>
+      </div>
     </div>
   );
 };
