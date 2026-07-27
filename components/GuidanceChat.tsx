@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/apiClient';
 import type { ChatMessage, Citation } from '../types';
+import { IconAsk, IconChevron, IconSend } from './icons';
 
 const TRANSLATIONS = ['KJV', 'NLT', 'ESV'] as const;
 
@@ -88,19 +89,18 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-100">Ask for Guidance</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-ink-100">Ask for Guidance</h1>
           <p className="text-sm text-ink-400">
             Ask as an elder — Berea answers grounded in Scripture, Ellen White's writings, and the Church Manual.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-ink-400">
-          <span>Translation</span>
+        <div className="relative shrink-0">
           <select
             value={translation}
             onChange={(e) => setTranslation(e.target.value as (typeof TRANSLATIONS)[number])}
-            className="rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-ink-100 outline-none focus:border-gold"
+            className="appearance-none rounded-full bg-ink-800 py-2 pl-4 pr-9 text-xs font-bold text-ink-100 outline-none"
           >
             {TRANSLATIONS.map((t) => (
               <option key={t} value={t}>
@@ -108,18 +108,19 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
               </option>
             ))}
           </select>
+          <IconChevron className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
         </div>
       </div>
 
-      <div className="mb-4 rounded-lg border border-banner-line bg-banner-bg px-4 py-3 text-xs text-banner-ink">
+      <div className="mb-4 rounded-2xl bg-ink-900 px-4 py-3 text-xs leading-relaxed text-ink-400">
         Berea is a study companion, not a substitute for your pastor. In situations involving abuse, self-harm, or
         immediate danger, please contact emergency services and your conference pastoral care line directly.
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto rounded-lg border border-ink-600 bg-ink-800/40 p-4">
+      <div className="flex-1 space-y-5 overflow-y-auto px-1">
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center text-ink-400">
-            <span className="mb-3 text-4xl">📖</span>
+            <IconAsk className="mb-3 h-9 w-9" />
             <p className="max-w-sm text-sm">
               Ask something like "How should I counsel a member struggling with doubt about the Sabbath?" or
               "What does the Church Manual say about reinstating a member?"
@@ -127,48 +128,43 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
           </div>
         )}
 
-        {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-2xl rounded-lg px-4 py-3 text-sm leading-relaxed ${
-                m.role === 'user'
-                  ? 'bg-gold text-gold-on'
-                  : 'border border-ink-600 bg-ink-800 text-ink-200'
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{m.content}</p>
+        {messages.map((m) =>
+          m.role === 'user' ? (
+            <div key={m.id} className="flex justify-end">
+              <div className="max-w-[75%] rounded-full bg-ink-800 px-4 py-2 text-sm font-medium leading-snug text-ink-100">
+                {m.content}
+              </div>
+            </div>
+          ) : (
+            <div key={m.id} className="flex max-w-2xl flex-col gap-3">
+              <p className="whitespace-pre-wrap text-sm leading-[1.7] text-ink-200">{m.content}</p>
               {m.citations && m.citations.length > 0 && (
-                <div className="mt-3 space-y-1.5 border-t border-ink-700 pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-400">Sources</p>
+                <div className="flex flex-wrap gap-1.5">
                   {m.citations.slice(0, 5).map((c, i) => (
-                    <div key={i} className="text-xs text-ink-400">
-                      <span className="font-semibold italic text-rubric">
-                        {c.abbreviation ?? c.title}
-                        {c.page ? `, p. ${c.page}` : ''}
-                      </span>{' '}
-                      <span className="text-ink-400/70">— {CATEGORY_LABEL[c.category]}</span>
-                    </div>
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-semibold text-ink-400"
+                    >
+                      <span className="h-1 w-1 shrink-0 rounded-full bg-ink-400" />
+                      {c.abbreviation ?? c.title}
+                      {c.page ? `, p. ${c.page}` : ''}
+                      <span className="text-ink-400/60">— {CATEGORY_LABEL[c.category]}</span>
+                    </span>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        ))}
-
-        {sending && (
-          <div className="flex justify-start">
-            <div className="rounded-lg border border-ink-600 bg-ink-800 px-4 py-3 text-sm text-ink-400">
-              Searching the library…
-            </div>
-          </div>
+          )
         )}
+
+        {sending && <p className="text-sm italic text-ink-400">Searching the library…</p>}
 
         <div ref={bottomRef} />
       </div>
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
-      <div className="mt-4 flex items-end gap-2">
+      <div className="mt-4 flex items-end gap-2 rounded-3xl bg-ink-900 py-2 pl-5 pr-2">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -178,16 +174,17 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
               handleSend();
             }
           }}
-          rows={2}
-          placeholder="Type your question…"
-          className="flex-1 resize-none rounded-lg border border-ink-600 bg-ink-800 px-4 py-3 text-sm text-ink-100 outline-none focus:border-gold"
+          rows={1}
+          placeholder="Ask a follow-up…"
+          className="max-h-32 flex-1 resize-none bg-transparent py-2 text-sm text-ink-100 outline-none placeholder:text-ink-400"
         />
         <button
           onClick={handleSend}
           disabled={sending || !input.trim()}
-          className="rounded-lg bg-gold px-5 py-3 text-sm font-semibold text-gold-on transition hover:bg-gold-dark disabled:opacity-50"
+          aria-label="Send"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-on transition disabled:opacity-40"
         >
-          Send
+          <IconSend className="h-4 w-4" />
         </button>
       </div>
     </div>
