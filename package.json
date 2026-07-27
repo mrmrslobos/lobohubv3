@@ -1,24 +1,30 @@
 {
-  "name": "sda-shepherd",
+  "name": "berea",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "ingest": "node --env-file=.env.local scripts/ingest.mjs",
     "seed:library": "node --env-file=.env.local scripts/seed-library.mjs"
   },
   "dependencies": {
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "@supabase/supabase-js": "^2.45.4"
+    "@neondatabase/serverless": "^0.10.4",
+    "bcryptjs": "^2.4.3",
+    "cookie": "^0.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie": "^0.6.0",
+    "@vercel/node": "^3.2.24",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",

@@ -1,27 +1,14 @@
-// Berea "guidance" edge function
-//
-// Takes a pastoral question, retrieves grounded excerpts from Scripture, the
-// Spirit of Prophecy, and the SDA Church Manual (via pgvector similarity
-// search), and asks Gemini to answer in the voice of a seasoned, doctrinally
-// grounded SDA pastor mentoring a local church elder.
-//
-// Secrets required (set with `supabase secrets set NAME=value`):
-//   GEMINI_API_KEY
-// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
+// The RAG endpoint: embeds the elder's question, retrieves the closest
+// passages from Scripture / Ellen White's writings / the Church Manual via
+// pgvector similarity search on Neon, and asks Gemini to answer grounded in
+// what was actually retrieved. GEMINI_API_KEY stays server-side.
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql, toVectorLiteral } from '../lib/db';
+import { getSessionUser } from '../lib/auth';
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const EMBEDDING_MODEL = 'text-embedding-004';
 const GENERATION_MODEL = 'gemini-2.5-flash';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const SYSTEM_PROMPT = `You are Berea, a study companion mentoring a local Seventh-day Adventist \
 church elder. You answer with the warmth, patience, and doctrinal grounding of an experienced \
@@ -45,12 +32,6 @@ lead with safety, urge contacting local emergency services and the conference/mi
 care line right away, and keep any spiritual counsel secondary to that.
 - Keep a gentle, unhurried, encouraging tone — the way a wise elder-of-elders would speak, not a \
 search engine.`;
-
-interface RequestBody {
-  question: string;
-  conversationId?: string;
-  translation?: 'KJV' | 'NLT' | 'ESV';
-}
 
 interface MatchRow {
   chunk_id: string;
@@ -98,46 +79,52 @@ async function generate(prompt: string): Promise<string> {
   return json.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY secret is not set. Run: supabase secrets set GEMINI_API_KEY=...');
+      throw new Error('GEMINI_API_KEY is not set — see .env.example.');
     }
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Missing Authorization header');
+    const user = await getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
-    const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const {
-      data: { user },
-    } = await userClient.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const { question, conversationId, translation } = req.body ?? {};
+    const trimmedQuestion = typeof question === 'string' ? question.trim() : '';
+    if (!trimmedQuestion) return res.status(400).json({ error: 'question is required' });
 
-    const body = (await req.json()) as RequestBody;
-    const question = body.question?.trim();
-    if (!question) throw new Error('question is required');
+    if (conversationId) {
+      const owned = await sql`
+        select id from conversations where id = ${conversationId} and user_id = ${user.id} limit 1
+      `;
+      if (owned.length === 0) return res.status(404).json({ error: 'Conversation not found' });
+    }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const queryEmbedding = await embed(trimmedQuestion);
+    const vectorLiteral = toVectorLiteral(queryEmbedding);
 
-    const queryEmbedding = await embed(question);
+    const matches = (await sql`
+      select
+        c.id as chunk_id,
+        c.document_id,
+        c.content,
+        c.page_number,
+        1 - (c.embedding <=> ${vectorLiteral}::vector) as similarity,
+        d.title,
+        d.abbreviation,
+        d.category
+      from document_chunks c
+      join documents d on d.id = c.document_id
+      order by c.embedding <=> ${vectorLiteral}::vector
+      limit 8
+    `) as MatchRow[];
 
-    const { data: matches, error: matchError } = await admin.rpc('match_document_chunks', {
-      query_embedding: queryEmbedding,
-      match_count: 8,
-      filter_categories: ['bible', 'egw', 'manual'],
-    });
-    if (matchError) throw matchError;
-
-    const rows = (matches ?? []) as MatchRow[];
-    const preferredTranslation = body.translation ?? 'KJV';
-    const sourceBlock = rows.length
-      ? rows
+    const preferredTranslation = translation ?? 'KJV';
+    const sourceBlock = matches.length
+      ? matches
           .map((r, i) => {
-            const label = r.abbreviation ? `${r.abbreviation}` : r.title;
+            const label = r.abbreviation ? r.abbreviation : r.title;
             const page = r.page_number ? `, p. ${r.page_number}` : '';
             return `[${i + 1}] (${label}${page}) ${r.content}`;
           })
@@ -154,13 +141,13 @@ RETRIEVED EXCERPTS:
 ${sourceBlock}
 
 ELDER'S QUESTION:
-${question}
+${trimmedQuestion}
 
 Respond now, grounded in the excerpts above.`;
 
     const answer = await generate(prompt);
 
-    const citations = rows.map((r) => ({
+    const citations = matches.map((r) => ({
       documentId: r.document_id,
       title: r.title,
       abbreviation: r.abbreviation,
@@ -170,30 +157,28 @@ Respond now, grounded in the excerpts above.`;
       similarity: r.similarity,
     }));
 
-    let conversationId = body.conversationId;
-    if (!conversationId) {
-      const { data: conv, error: convError } = await admin
-        .from('conversations')
-        .insert({ user_id: user.id, title: question.slice(0, 80) })
-        .select('id')
-        .single();
-      if (convError) throw convError;
-      conversationId = conv.id;
+    let finalConversationId = conversationId as string | undefined;
+    if (!finalConversationId) {
+      const rows = await sql`
+        insert into conversations (user_id, title)
+        values (${user.id}, ${trimmedQuestion.slice(0, 80)})
+        returning id
+      `;
+      finalConversationId = (rows[0] as { id: string }).id;
     }
 
-    await admin.from('messages').insert([
-      { conversation_id: conversationId, role: 'user', content: question },
-      { conversation_id: conversationId, role: 'assistant', content: answer, citations },
-    ]);
+    await sql`
+      insert into messages (conversation_id, role, content)
+      values (${finalConversationId}, 'user', ${trimmedQuestion})
+    `;
+    await sql`
+      insert into messages (conversation_id, role, content, citations)
+      values (${finalConversationId}, 'assistant', ${answer}, ${JSON.stringify(citations)})
+    `;
 
-    return new Response(JSON.stringify({ answer, citations, conversationId }), {
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ answer, citations, conversationId: finalConversationId });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: message });
   }
-});
+}

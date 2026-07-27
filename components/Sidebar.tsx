@@ -15,7 +15,7 @@ const NAV_ITEMS: { id: View; label: string; icon: string }[] = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
-  const { profile, user, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <aside className="flex w-20 flex-col border-r border-stone-800 bg-stone-900 transition-all duration-300 md:w-64">
@@ -50,11 +50,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
         {user && (
           <div className="flex items-center gap-3 px-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-berea-700 text-xs font-bold">
-              {(profile?.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
+              {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="hidden overflow-hidden md:block">
-              <p className="truncate text-sm font-semibold">{profile?.displayName ?? user.email}</p>
-              <p className="truncate text-xs capitalize text-stone-500">{profile?.role ?? 'elder'}</p>
+              <p className="truncate text-sm font-semibold">{user.displayName ?? user.email}</p>
+              <p className="truncate text-xs capitalize text-stone-500">{user.role}</p>
             </div>
           </div>
         )}

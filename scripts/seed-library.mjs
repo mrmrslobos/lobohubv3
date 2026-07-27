@@ -2,20 +2,18 @@
 // row in `documents`, with ingested=false, so the Library page shows the full
 // catalog immediately. Run `npm run ingest` afterwards to fill in content.
 //
-// Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local.
+// Requires DATABASE_URL in .env.local.
 
-import { createClient } from '@supabase/supabase-js';
+import { neon } from '@neondatabase/serverless';
 import { BIBLE_SEED, MANUAL_SEED, EGW_SEED, titleForAbbreviation } from '../data/library-seed.mjs';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local first.');
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('Set DATABASE_URL in .env.local first (see .env.example).');
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+const sql = neon(DATABASE_URL);
 
 const rows = [
   ...BIBLE_SEED.map((d) => ({
@@ -23,31 +21,39 @@ const rows = [
     title: d.title,
     abbreviation: d.abbreviation,
     translation: d.translation,
-    drive_file_id: d.driveFileId,
+    driveFileId: d.driveFileId,
   })),
   ...MANUAL_SEED.map((d) => ({
     category: d.category,
     title: d.title,
     abbreviation: d.abbreviation,
     translation: d.translation,
-    drive_file_id: d.driveFileId,
+    driveFileId: d.driveFileId,
   })),
   ...EGW_SEED.map((d) => ({
     category: 'egw',
     title: titleForAbbreviation(d.abbreviation),
     abbreviation: d.abbreviation,
     translation: null,
-    drive_file_id: d.driveFileId,
+    driveFileId: d.driveFileId,
   })),
 ];
 
 console.log(`Seeding ${rows.length} documents...`);
 
-const { error } = await supabase.from('documents').upsert(rows, { onConflict: 'drive_file_id' });
-
-if (error) {
-  console.error('Seed failed:', error);
-  process.exit(1);
+let count = 0;
+for (const row of rows) {
+  await sql`
+    insert into documents (category, title, abbreviation, translation, drive_file_id)
+    values (${row.category}, ${row.title}, ${row.abbreviation}, ${row.translation}, ${row.driveFileId})
+    on conflict (drive_file_id) do update set
+      category = excluded.category,
+      title = excluded.title,
+      abbreviation = excluded.abbreviation,
+      translation = excluded.translation
+  `;
+  count += 1;
+  if (count % 20 === 0) process.stdout.write(`\r  ${count}/${rows.length}`);
 }
 
-console.log('Done. Library catalog is populated (ingested=false until you run `npm run ingest`).');
+console.log(`\nDone. Library catalog is populated (ingested=false until you run \`npm run ingest\`).`);

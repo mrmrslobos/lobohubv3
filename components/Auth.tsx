@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 const Auth: React.FC = () => {
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,12 +17,10 @@ const Auth: React.FC = () => {
     setBusy(true);
     try {
       if (mode === 'signIn') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signIn(email, password);
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        setInfo('Check your inbox to confirm your email, then sign in.');
+        await signUp(email, password);
+        setInfo('Account created — you are signed in.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');

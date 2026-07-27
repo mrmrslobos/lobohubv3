@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/apiClient';
 import type { Conversation } from '../types';
 
 interface HistoryProps {
@@ -11,14 +11,10 @@ const History: React.FC<HistoryProps> = ({ onSelect }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from('conversations')
-      .select('id, title, created_at')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setConversations((data ?? []).map((c) => ({ id: c.id, title: c.title, createdAt: c.created_at })));
-        setLoading(false);
-      });
+    api.conversations().then(({ conversations }) => {
+      setConversations(conversations.map((c) => ({ id: c.id, title: c.title, createdAt: c.created_at })));
+      setLoading(false);
+    });
   }, []);
 
   return (

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/apiClient';
 import type { ChatMessage, Citation } from '../types';
 
 const TRANSLATIONS = ['KJV', 'NLT', 'ESV'] as const;
@@ -32,23 +32,17 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
       setMessages([]);
       return;
     }
-    supabase
-      .from('messages')
-      .select('id, role, content, citations, created_at')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        if (!data) return;
-        setMessages(
-          data.map((m) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            citations: m.citations ?? undefined,
-            createdAt: m.created_at,
-          }))
-        );
-      });
+    api.messages(conversationId).then(({ messages }) => {
+      setMessages(
+        messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          citations: m.citations ?? undefined,
+          createdAt: m.created_at,
+        }))
+      );
+    });
   }, [conversationId]);
 
   const handleSend = async () => {
@@ -67,11 +61,7 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
     setMessages((prev) => [...prev, optimisticUser]);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('guidance', {
-        body: { question, conversationId: conversationId ?? undefined, translation },
-      });
-      if (fnError) throw fnError;
-      if (data?.error) throw new Error(data.error);
+      const data = await api.askGuidance(question, conversationId ?? undefined, translation);
 
       const assistantMessage: ChatMessage = {
         id: `local-${Date.now()}-a`,
@@ -89,7 +79,7 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
       setError(
         err instanceof Error
           ? err.message
-          : 'Something went wrong reaching Berea. Check that the guidance function and GEMINI_API_KEY are configured.'
+          : 'Something went wrong reaching Berea. Check that DATABASE_URL and GEMINI_API_KEY are configured.'
       );
     } finally {
       setSending(false);
