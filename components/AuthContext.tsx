@@ -1,59 +1,66 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import type { Profile } from '../types';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '../types';
-
-interface AuthContextType {
+interface AuthContextValue {
+  session: Session | null;
   user: User | null;
-  login: (email: string) => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
+  profile: Profile | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('lobo_user');
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
-    setIsLoading(false);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string) => {
-    // Simulated authentication
-    const mockUsers: User[] = [
-      { id: '1', name: 'Wolf Admin', role: UserRole.ADMIN, email: 'admin@lobo.com', color: '#3b82f6' },
-      { id: '2', name: 'Alpha Parent', role: UserRole.PARENT, email: 'parent@lobo.com', color: '#ef4444' },
-      { id: '3', name: 'Beta Child', role: UserRole.CHILD, email: 'child@lobo.com', color: '#10b981' }
-    ];
-
-    const found = mockUsers.find(u => u.email === email);
-    if (found) {
-      setUser(found);
-      localStorage.setItem('lobo_user', JSON.stringify(found));
-    } else {
-      throw new Error('User not found. Use admin@lobo.com, parent@lobo.com, or child@lobo.com');
+  useEffect(() => {
+    if (!session?.user) {
+      setProfile(null);
+      return;
     }
-  };
+    supabase
+      .from('profiles')
+      .select('id, email, display_name, role')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setProfile({ id: data.id, email: data.email, displayName: data.display_name, role: data.role });
+        }
+      });
+  }, [session?.user?.id]);
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('lobo_user');
+  const signOut = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-};
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}

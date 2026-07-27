@@ -1,70 +1,46 @@
+export type DocumentCategory = 'bible' | 'egw' | 'manual';
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  PARENT = 'PARENT',
-  CHILD = 'CHILD'
+export interface LibraryDocument {
+  id: string;
+  category: DocumentCategory;
+  title: string;
+  abbreviation: string | null;
+  translation: string | null;
+  author: string | null;
+  source_note: string | null;
+  page_count: number | null;
+  ingested: boolean;
+  chunk_count: number;
+  created_at: string;
 }
 
-export interface User {
+export interface Citation {
+  documentId: string;
+  title: string;
+  abbreviation: string | null;
+  category: DocumentCategory;
+  excerpt: string;
+  page: number | null;
+  similarity: number;
+}
+
+export interface ChatMessage {
   id: string;
-  name: string;
-  role: UserRole;
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: Citation[];
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface Profile {
+  id: string;
   email: string;
-  avatar?: string;
-  color: string;
-}
-
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  description?: string;
-  start: string;
-  end: string;
-  assignedTo: string[];
-  category: 'Family' | 'Work' | 'School' | 'Other';
-}
-
-export enum TaskPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH'
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate?: string;
-  priority: TaskPriority;
-  assignedTo: string;
-  completed: boolean;
-  createdBy: string;
-}
-
-export interface ShoppingItem {
-  id: string;
-  name: string;
-  quantity: string;
-  category: string;
-  purchased: boolean;
-  requestedBy: string;
-}
-
-export interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: 'INCOME' | 'EXPENSE';
-  category: string;
-  date: string;
-  userId: string;
-}
-
-export interface AppState {
-  currentUser: User | null;
-  users: User[];
-  events: CalendarEvent[];
-  tasks: Task[];
-  shoppingItems: ShoppingItem[];
-  transactions: Transaction[];
+  displayName: string | null;
+  role: 'elder' | 'admin';
 }

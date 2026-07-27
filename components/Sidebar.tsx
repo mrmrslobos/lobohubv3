@@ -1,70 +1,69 @@
-
 import React from 'react';
 import { useAuth } from './AuthContext';
 
+export type View = 'guidance' | 'library' | 'history';
+
 interface SidebarProps {
-  activeView: string;
-  onViewChange: (view: any) => void;
+  activeView: View;
+  onViewChange: (view: View) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
-  const { user, logout } = useAuth();
+const NAV_ITEMS: { id: View; label: string; icon: string }[] = [
+  { id: 'guidance', label: 'Ask for Guidance', icon: '🙏' },
+  { id: 'library', label: 'Library', icon: '📚' },
+  { id: 'history', label: 'History', icon: '🕰️' },
+];
 
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-    { id: 'calendar', label: 'Calendar', icon: '📅' },
-    { id: 'tasks', label: 'Tasks', icon: '📝' },
-    { id: 'shopping', label: 'Shopping', icon: '🛒' },
-    { id: 'budget', label: 'Budget', icon: '💰' },
-  ];
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
+  const { profile, user, signOut } = useAuth();
 
   return (
-    <aside className="w-20 md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300">
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/20">
-          🐺
+    <aside className="flex w-20 flex-col border-r border-stone-800 bg-stone-900 transition-all duration-300 md:w-64">
+      <div className="flex items-center gap-3 p-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-berea-600 text-xl shadow-lg shadow-berea-600/20">
+          📖
         </div>
-        <span className="hidden md:block font-bold text-xl tracking-tight">Lobo Family</span>
+        <div className="hidden md:block">
+          <span className="block text-xl font-bold tracking-tight">Berea</span>
+          <span className="block text-[11px] text-stone-500">SDA Pastoral Guidance</span>
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
-        {navItems.map((item) => (
+      <nav className="flex-1 space-y-1 px-3">
+        {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
             onClick={() => onViewChange(item.id)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${
-              activeView === item.id 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            className={`flex w-full items-center gap-4 rounded-xl px-4 py-3 transition-all ${
+              activeView === item.id
+                ? 'bg-berea-600 text-white shadow-lg shadow-berea-600/20'
+                : 'text-stone-400 hover:bg-stone-800 hover:text-white'
             }`}
           >
             <span className="text-xl">{item.icon}</span>
-            <span className="hidden md:block font-medium">{item.label}</span>
+            <span className="hidden font-medium md:block">{item.label}</span>
           </button>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-slate-800 space-y-4">
+      <div className="space-y-4 border-t border-stone-800 p-4">
         {user && (
           <div className="flex items-center gap-3 px-2">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-              style={{ backgroundColor: user.color }}
-            >
-              {user.name.charAt(0)}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-berea-700 text-xs font-bold">
+              {(profile?.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
             </div>
-            <div className="hidden md:block overflow-hidden">
-              <p className="text-sm font-semibold truncate">{user.name}</p>
-              <p className="text-xs text-slate-500 truncate capitalize">{user.role.toLowerCase()}</p>
+            <div className="hidden overflow-hidden md:block">
+              <p className="truncate text-sm font-semibold">{profile?.displayName ?? user.email}</p>
+              <p className="truncate text-xs capitalize text-stone-500">{profile?.role ?? 'elder'}</p>
             </div>
           </div>
         )}
         <button
-          onClick={logout}
-          className="w-full flex items-center gap-4 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+          onClick={signOut}
+          className="flex w-full items-center gap-4 rounded-lg px-4 py-2 text-red-400 transition-colors hover:bg-red-500/10"
         >
           <span className="text-xl">🚪</span>
-          <span className="hidden md:block text-sm font-medium">Sign Out</span>
+          <span className="hidden text-sm font-medium md:block">Sign Out</span>
         </button>
       </div>
     </aside>
