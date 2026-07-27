@@ -6,6 +6,7 @@ import GuidanceChat from './components/GuidanceChat';
 import Library from './components/Library';
 import History from './components/History';
 import Admin from './components/Admin';
+import { IconMenu } from './components/icons';
 
 const MainContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -15,7 +16,7 @@ const MainContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-ink-900 text-ink-400">
+      <div className="flex h-screen items-center justify-center bg-ink-950 text-ink-400">
         Loading Berea…
       </div>
     );
@@ -49,7 +50,7 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-ink-900 text-ink-200">
+    <div className="flex h-screen overflow-hidden bg-ink-950 text-ink-200">
       <Sidebar
         activeView={view}
         onViewChange={(v) => {
@@ -60,15 +61,15 @@ const MainContent: React.FC = () => {
         onClose={() => setSidebarOpen(false)}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-ink-600 bg-ink-950 px-4 py-3 md:hidden">
+        <div className="flex items-center gap-3 bg-ink-900 px-4 py-3 md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
-            className="rounded-lg p-1.5 text-ink-200 hover:bg-ink-800"
+            className="rounded-full p-1.5 text-ink-200 hover:bg-ink-800"
           >
-            <span className="block text-xl leading-none">☰</span>
+            <IconMenu className="h-5 w-5" />
           </button>
-          <span className="font-serif text-lg font-semibold text-ink-100">Berea</span>
+          <span className="text-lg font-semibold text-ink-100">Berea</span>
         </div>
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="mx-auto h-full max-w-5xl">{renderView()}</div>

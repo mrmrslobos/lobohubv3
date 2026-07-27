@@ -11,32 +11,23 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['"Work Sans"', 'system-ui', 'sans-serif'],
-              serif: ['Literata', 'Georgia', 'serif'],
+              sans: ['Sora', 'system-ui', 'sans-serif'],
             },
             colors: {
               ink: {
-                950: '#0D1022',
-                900: '#12162B',
-                800: '#1A2043',
-                700: '#232847',
-                600: '#2A2F52',
-                400: '#8B8CAE',
-                200: '#D9D7E8',
-                100: '#F1EFE4',
+                950: '#101114',
+                900: '#17181C',
+                800: '#1E2025',
+                600: '#24262B',
+                400: '#7C7F87',
+                200: '#D7D8DC',
+                100: '#F5F6F8',
               },
-              gold: {
-                DEFAULT: '#C9A227',
-                dark: '#8F7118',
-                wash: '#2A2545',
-                on: '#201704',
+              accent: {
+                DEFAULT: '#4F8CFF',
+                on: '#0B0D12',
               },
-              rubric: '#C25B3A',
-              banner: {
-                bg: '#1E1A38',
-                ink: '#D8CFA0',
-                line: '#3A3260',
-              },
+              good: '#6FCF97',
             },
           },
         },
@@ -45,11 +36,11 @@
     <style>
       html { scroll-behavior: smooth; }
       ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: #8f7118; border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb { background: #4F8CFF; border-radius: 9999px; }
       ::-webkit-scrollbar-track { background: transparent; }
     </style>
   </head>
-  <body class="bg-ink-900 text-ink-200 font-sans">
+  <body class="bg-ink-950 text-ink-200 font-sans">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
