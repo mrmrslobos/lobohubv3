@@ -7,7 +7,8 @@ import { sql, toVectorLiteral } from '../lib/db.js';
 import { getSessionUser } from '../lib/auth.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'gemini-embedding-2';
+const EMBEDDING_DIMENSIONS = 768; // must match the `vector(768)` column in migrations/0001_init.sql
 const GENERATION_MODEL = 'gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `You are Berea, a study companion mentoring a local Seventh-day Adventist \
@@ -54,6 +55,7 @@ async function embed(text: string): Promise<number[]> {
         model: `models/${EMBEDDING_MODEL}`,
         content: { parts: [{ text }] },
         taskType: 'RETRIEVAL_QUERY',
+        outputDimensionality: EMBEDDING_DIMENSIONS,
       }),
     }
   );
