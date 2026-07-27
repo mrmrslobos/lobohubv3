@@ -6,6 +6,7 @@ const Auth: React.FC = () => {
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -19,7 +20,7 @@ const Auth: React.FC = () => {
       if (mode === 'signIn') {
         await signIn(email, password);
       } else {
-        await signUp(email, password);
+        await signUp(email, password, inviteCode);
         setInfo('Account created — you are signed in.');
       }
     } catch (err) {
@@ -66,6 +67,19 @@ const Auth: React.FC = () => {
               placeholder="••••••••"
             />
           </div>
+          {mode === 'signUp' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-400">Invite code</label>
+              <input
+                type="text"
+                required
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                className="w-full rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-sm text-ink-100 outline-none focus:border-gold"
+                placeholder="Ask your elder for this"
+              />
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-400">{error}</p>}
           {info && <p className="text-sm text-gold">{info}</p>}

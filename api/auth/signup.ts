@@ -2,12 +2,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '../../lib/db.js';
 import { hashPassword, createSession } from '../../lib/auth.js';
 
+const INVITE_CODE = process.env.SIGNUP_INVITE_CODE;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { email, password, displayName } = req.body ?? {};
+  if (!INVITE_CODE) {
+    return res.status(503).json({ error: 'Sign-up is not configured — set SIGNUP_INVITE_CODE.' });
+  }
+
+  const { email, password, displayName, inviteCode } = req.body ?? {};
   if (typeof email !== 'string' || typeof password !== 'string' || password.length < 6) {
     return res.status(400).json({ error: 'A valid email and a password of at least 6 characters are required.' });
+  }
+  if (typeof inviteCode !== 'string' || inviteCode !== INVITE_CODE) {
+    return res.status(403).json({ error: 'Invalid invite code.' });
   }
 
   const normalizedEmail = email.trim().toLowerCase();

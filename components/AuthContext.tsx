@@ -6,7 +6,7 @@ interface AuthContextValue {
   user: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<void>;
+  signUp: (email: string, password: string, inviteCode: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -29,8 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(user);
   };
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
-    const { user } = await api.signUp(email, password, displayName);
+  const signUp = async (email: string, password: string, inviteCode: string, displayName?: string) => {
+    const { user } = await api.signUp(email, password, inviteCode, displayName);
     setUser(user);
   };
 
