@@ -1,91 +1,92 @@
-
 import React, { useState } from 'react';
-import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 const Auth: React.FC = () => {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('admin@lobo.com');
-  const [error, setError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoggingIn(true);
+    setError(null);
+    setInfo(null);
+    setBusy(true);
     try {
-      await login(email);
-    } catch (err: any) {
-      setError(err.message);
+      if (mode === 'signIn') {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setInfo('Check your inbox to confirm your email, then sign in.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
-      setIsLoggingIn(false);
+      setBusy(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6 relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-600/10 blur-[120px] rounded-full" />
-      <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-purple-600/10 blur-[120px] rounded-full" />
-
-      <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in duration-700">
-        <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center font-bold text-4xl shadow-2xl shadow-blue-500/30 mx-auto mb-6 transform hover:rotate-6 transition-transform">
-            🐺
+    <div className="flex h-screen items-center justify-center bg-stone-950 px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-berea-600 text-2xl shadow-lg shadow-berea-600/20">
+            📖
           </div>
-          <h1 className="text-4xl font-black tracking-tighter mb-2">LOBO PLANNING</h1>
-          <p className="text-slate-500 font-medium">Secure family management for the pack.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-100">Berea</h1>
+          <p className="mt-1 text-sm text-stone-400">
+            Pastoral guidance grounded in Scripture, the Spirit of Prophecy, and the Church Manual.
+          </p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[40px] shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 ml-1">Family Email</label>
-              <input 
-                type="email" 
-                required
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 transition-all"
-                placeholder="Enter your email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-              />
-              <p className="mt-2 text-[10px] text-slate-500 italic">Try: admin@lobo.com, parent@lobo.com, or child@lobo.com</p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 ml-1">Pass-key</label>
-              <input 
-                type="password" 
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 transition-all"
-                placeholder="••••••••"
-                defaultValue="password123"
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center font-medium animate-pulse">
-                {error}
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={isLoggingIn}
-              className={`w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-600/20 transition-all transform active:scale-95 ${isLoggingIn ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {isLoggingIn ? 'Verifying...' : 'Join the Pack'}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-slate-800 text-center">
-            <p className="text-sm text-slate-500">
-              New family? <button className="text-blue-400 font-bold hover:underline">Register your household</button>
-            </p>
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-stone-800 bg-stone-900 p-6">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-stone-400">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none focus:border-berea-500"
+              placeholder="elder@yourchurch.org"
+            />
           </div>
-        </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-stone-400">Password</label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none focus:border-berea-500"
+              placeholder="••••••••"
+            />
+          </div>
 
-        <p className="mt-8 text-center text-xs text-slate-600 font-medium">
-          Self-hosted & End-to-End Encrypted. <br/> Lobo Planning v1.0.0
-        </p>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {info && <p className="text-sm text-berea-400">{info}</p>}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-lg bg-berea-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-berea-500 disabled:opacity-50"
+          >
+            {busy ? 'Please wait…' : mode === 'signIn' ? 'Sign In' : 'Create Account'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMode(mode === 'signIn' ? 'signUp' : 'signIn')}
+            className="w-full text-center text-xs text-stone-500 hover:text-stone-300"
+          >
+            {mode === 'signIn' ? "Need an account? Sign up" : 'Already have an account? Sign in'}
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -1,71 +1,60 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './components/AuthContext';
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import Calendar from './components/Calendar';
-import Tasks from './components/Tasks';
-import ShoppingList from './components/ShoppingList';
-import Budget from './components/Budget';
+import Sidebar, { type View } from './components/Sidebar';
 import Auth from './components/Auth';
-import { AppState, User, UserRole, TaskPriority } from './types';
-
-// Initial Mock Data
-const INITIAL_DATA: AppState = {
-  currentUser: null,
-  users: [
-    { id: '1', name: 'Wolf Admin', role: UserRole.ADMIN, email: 'admin@lobo.com', color: '#3b82f6' },
-    { id: '2', name: 'Alpha Parent', role: UserRole.PARENT, email: 'parent@lobo.com', color: '#ef4444' },
-    { id: '3', name: 'Beta Child', role: UserRole.CHILD, email: 'child@lobo.com', color: '#10b981' }
-  ],
-  events: [
-    { id: 'e1', title: 'Weekly Pack Meeting', start: new Date().toISOString(), end: new Date(Date.now() + 3600000).toISOString(), assignedTo: ['1', '2', '3'], category: 'Family' }
-  ],
-  tasks: [
-    { id: 't1', title: 'Fix the Den Fence', priority: TaskPriority.HIGH, assignedTo: '1', completed: false, createdBy: '2' },
-    { id: 't2', title: 'Math Homework', priority: TaskPriority.MEDIUM, assignedTo: '3', completed: false, createdBy: '2' }
-  ],
-  shoppingItems: [
-    { id: 's1', name: 'Meat', quantity: '2kg', category: 'Meat', purchased: false, requestedBy: '2' }
-  ],
-  transactions: [
-    { id: 'tr1', description: 'Monthly Salary', amount: 5000, type: 'INCOME', category: 'Salary', date: new Date().toISOString(), userId: '1' },
-    { id: 'tr2', description: 'Groceries', amount: 200, type: 'EXPENSE', category: 'Groceries', date: new Date().toISOString(), userId: '2' }
-  ]
-};
+import GuidanceChat from './components/GuidanceChat';
+import Library from './components/Library';
+import History from './components/History';
 
 const MainContent: React.FC = () => {
-  const { user } = useAuth();
-  const [view, setView] = useState<'dashboard' | 'calendar' | 'tasks' | 'shopping' | 'budget'>('dashboard');
-  const [appState, setAppState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('lobo_app_state');
-    return saved ? JSON.parse(saved) : INITIAL_DATA;
-  });
+  const { user, loading } = useAuth();
+  const [view, setView] = useState<View>('guidance');
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('lobo_app_state', JSON.stringify(appState));
-  }, [appState]);
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-stone-950 text-stone-500">
+        Loading Berea…
+      </div>
+    );
+  }
 
   if (!user) return <Auth />;
 
+  const goToConversation = (id: string) => {
+    setConversationId(id);
+    setView('guidance');
+  };
+
   const renderView = () => {
     switch (view) {
-      case 'dashboard': return <Dashboard state={appState} setState={setAppState} />;
-      case 'calendar': return <Calendar state={appState} setState={setAppState} />;
-      case 'tasks': return <Tasks state={appState} setState={setAppState} />;
-      case 'shopping': return <ShoppingList state={appState} setState={setAppState} />;
-      case 'budget': return <Budget state={appState} setState={setAppState} />;
-      default: return <Dashboard state={appState} setState={setAppState} />;
+      case 'guidance':
+        return (
+          <GuidanceChat
+            conversationId={conversationId}
+            onConversationStarted={(id) => setConversationId(id)}
+          />
+        );
+      case 'library':
+        return <Library />;
+      case 'history':
+        return <History onSelect={goToConversation} />;
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-      <Sidebar activeView={view} onViewChange={setView} />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-8 pb-12">
-          {renderView()}
-        </div>
+    <div className="flex h-screen overflow-hidden bg-stone-950 text-stone-100">
+      <Sidebar
+        activeView={view}
+        onViewChange={(v) => {
+          if (v === 'guidance' && view !== 'guidance') setConversationId(null);
+          setView(v);
+        }}
+      />
+      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="mx-auto h-full max-w-5xl">{renderView()}</div>
       </main>
     </div>
   );
