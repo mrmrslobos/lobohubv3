@@ -13,7 +13,7 @@ const MainContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-stone-950 text-stone-500">
+      <div className="flex h-screen items-center justify-center bg-ink-900 text-ink-400">
         Loading Berea…
       </div>
     );
@@ -45,7 +45,7 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-stone-950 text-stone-100">
+    <div className="flex h-screen overflow-hidden bg-ink-900 text-ink-200">
       <Sidebar
         activeView={view}
         onViewChange={(v) => {

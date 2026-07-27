@@ -18,14 +18,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
   const { user, signOut } = useAuth();
 
   return (
-    <aside className="flex w-20 flex-col border-r border-stone-800 bg-stone-900 transition-all duration-300 md:w-64">
+    <aside className="flex w-20 flex-col border-r border-ink-600 bg-ink-950 transition-all duration-300 md:w-64">
       <div className="flex items-center gap-3 p-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-berea-600 text-xl shadow-lg shadow-berea-600/20">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-gold/50 text-xl text-gold">
           📖
         </div>
         <div className="hidden md:block">
-          <span className="block text-xl font-bold tracking-tight">Berea</span>
-          <span className="block text-[11px] text-stone-500">SDA Pastoral Guidance</span>
+          <span className="block font-serif text-xl font-semibold tracking-tight text-ink-100">Berea</span>
+          <span className="block text-[11px] text-ink-400">SDA Pastoral Guidance</span>
         </div>
       </div>
 
@@ -34,10 +34,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
           <button
             key={item.id}
             onClick={() => onViewChange(item.id)}
-            className={`flex w-full items-center gap-4 rounded-xl px-4 py-3 transition-all ${
+            className={`flex w-full items-center gap-4 rounded-lg px-4 py-3 transition-all ${
               activeView === item.id
-                ? 'bg-berea-600 text-white shadow-lg shadow-berea-600/20'
-                : 'text-stone-400 hover:bg-stone-800 hover:text-white'
+                ? 'bg-gold-wash text-ink-100 shadow-[inset_2px_0_0_theme(colors.gold.DEFAULT)]'
+                : 'text-ink-400 hover:bg-ink-800 hover:text-ink-100'
             }`}
           >
             <span className="text-xl">{item.icon}</span>
@@ -46,15 +46,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
         ))}
       </nav>
 
-      <div className="space-y-4 border-t border-stone-800 p-4">
+      <div className="space-y-4 border-t border-ink-600 p-4">
         {user && (
           <div className="flex items-center gap-3 px-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-berea-700 text-xs font-bold">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-wash font-serif text-xs font-bold text-gold">
               {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="hidden overflow-hidden md:block">
-              <p className="truncate text-sm font-semibold">{user.displayName ?? user.email}</p>
-              <p className="truncate text-xs capitalize text-stone-500">{user.role}</p>
+              <p className="truncate text-sm font-semibold text-ink-100">{user.displayName ?? user.email}</p>
+              <p className="truncate text-xs capitalize text-ink-400">{user.role}</p>
             </div>
           </div>
         )}

@@ -49,10 +49,10 @@ const Library: React.FC = () => {
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Library</h1>
-          <p className="text-sm text-stone-400">
+          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-100">Library</h1>
+          <p className="text-sm text-ink-400">
             {docs.length === 0
-              ? 'No documents registered yet — run `npm run seed:library` after connecting Supabase.'
+              ? 'No documents registered yet — run `npm run seed:library` to populate the catalog.'
               : `${totalIngested} of ${docs.length} documents ready for guidance search.`}
           </p>
         </div>
@@ -60,11 +60,11 @@ const Library: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search the library…"
-          className="w-full max-w-xs rounded-lg border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 outline-none focus:border-berea-500"
+          className="w-full max-w-xs rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-ink-100 outline-none focus:border-gold"
         />
       </div>
 
-      {loading && <p className="text-sm text-stone-500">Loading…</p>}
+      {loading && <p className="text-sm text-ink-400">Loading…</p>}
 
       {!loading &&
         (Object.keys(CATEGORY_META) as DocumentCategory[]).map((category) => {
@@ -73,30 +73,30 @@ const Library: React.FC = () => {
           const meta = CATEGORY_META[category];
           return (
             <section key={category} className="mb-8">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-stone-400">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-400">
                 <span>{meta.icon}</span>
                 {meta.label}
-                <span className="text-stone-600">({items.length})</span>
+                <span className="text-ink-400/60">({items.length})</span>
               </h2>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((doc) => (
                   <div
                     key={doc.id}
-                    className="rounded-xl border border-stone-800 bg-stone-900 p-4 transition hover:border-stone-700"
+                    className="rounded-lg border border-ink-600 bg-ink-800 p-4 transition hover:border-gold/40"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug text-stone-100">{doc.title}</p>
+                      <p className="text-sm font-medium leading-snug text-ink-100">{doc.title}</p>
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          doc.ingested ? 'bg-berea-600/20 text-berea-400' : 'bg-stone-700/40 text-stone-400'
+                          doc.ingested ? 'bg-gold/15 text-gold' : 'bg-ink-600/40 text-ink-400'
                         }`}
                       >
                         {doc.ingested ? 'Ready' : 'Pending'}
                       </span>
                     </div>
-                    {doc.abbreviation && <p className="mt-1 text-xs text-stone-500">{doc.abbreviation}</p>}
+                    {doc.abbreviation && <p className="mt-1 text-xs text-ink-400">{doc.abbreviation}</p>}
                     {doc.ingested && (
-                      <p className="mt-2 text-[11px] text-stone-600">
+                      <p className="mt-2 text-[11px] text-ink-400/70">
                         {doc.chunk_count} passages{doc.page_count ? ` · ${doc.page_count} pages` : ''}
                       </p>
                     )}

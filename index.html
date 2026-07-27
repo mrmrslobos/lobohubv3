@@ -10,18 +10,32 @@
       tailwind.config = {
         theme: {
           extend: {
+            fontFamily: {
+              sans: ['"Work Sans"', 'system-ui', 'sans-serif'],
+              serif: ['Literata', 'Georgia', 'serif'],
+            },
             colors: {
-              berea: {
-                50: '#f5f7f4',
-                100: '#e6ebe2',
-                200: '#c9d5bf',
-                300: '#a3b993',
-                400: '#7c9a68',
-                500: '#5c7d49',
-                600: '#476338',
-                700: '#394f2e',
-                800: '#2f4127',
-                900: '#283722',
+              ink: {
+                950: '#0D1022',
+                900: '#12162B',
+                800: '#1A2043',
+                700: '#232847',
+                600: '#2A2F52',
+                400: '#8B8CAE',
+                200: '#D9D7E8',
+                100: '#F1EFE4',
+              },
+              gold: {
+                DEFAULT: '#C9A227',
+                dark: '#8F7118',
+                wash: '#2A2545',
+                on: '#201704',
+              },
+              rubric: '#C25B3A',
+              banner: {
+                bg: '#1E1A38',
+                ink: '#D8CFA0',
+                line: '#3A3260',
               },
             },
           },
@@ -31,11 +45,11 @@
     <style>
       html { scroll-behavior: smooth; }
       ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: #476338; border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb { background: #8f7118; border-radius: 9999px; }
       ::-webkit-scrollbar-track { background: transparent; }
     </style>
   </head>
-  <body class="bg-stone-950 text-stone-100">
+  <body class="bg-ink-900 text-ink-200 font-sans">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
