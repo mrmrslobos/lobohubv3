@@ -1,5 +1,5 @@
 // Extracts text from PDFs, chunks it, embeds each chunk with Gemini, and
-// upserts everything into Supabase (documents + document_chunks).
+// upserts everything into Neon (documents + document_chunks).
 //
 // Usage:
 //   npm run ingest -- [libraryDir] [--force]
@@ -12,19 +12,18 @@
 // (Download the "Ellen G White" Drive folder, plus the Bible/Church Manual
 // PDFs, into that layout — Drive lets you download a whole folder as a zip.)
 //
-// Requires in .env.local: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY
+// Requires in .env.local: DATABASE_URL, GEMINI_API_KEY
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createClient } from '@supabase/supabase-js';
+import { neon } from '@neondatabase/serverless';
 import pdfParse from 'pdf-parse';
 import { BIBLE_SEED, MANUAL_SEED, EGW_SEED, titleForAbbreviation } from '../data/library-seed.mjs';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DATABASE_URL = process.env.DATABASE_URL;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-for (const [name, val] of Object.entries({ SUPABASE_URL, SERVICE_ROLE_KEY, GEMINI_API_KEY })) {
+for (const [name, val] of Object.entries({ DATABASE_URL, GEMINI_API_KEY })) {
   if (!val) {
     console.error(`Missing ${name} in .env.local`);
     process.exit(1);
@@ -35,11 +34,15 @@ const args = process.argv.slice(2);
 const force = args.includes('--force');
 const libraryDir = args.find((a) => !a.startsWith('--')) ?? './library';
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+const sql = neon(DATABASE_URL);
 
 const CHUNK_SIZE = 1200;
 const CHUNK_OVERLAP = 150;
 const EMBEDDING_MODEL = 'text-embedding-004';
+
+function toVectorLiteral(embedding) {
+  return `[${embedding.join(',')}]`;
+}
 
 function chunkText(text) {
   const chunks = [];
@@ -117,13 +120,22 @@ function identifyEgw(filename) {
 }
 
 async function upsertDocument(row) {
-  const conflictTarget = row.drive_file_id ? 'drive_file_id' : undefined;
-  const query = conflictTarget
-    ? supabase.from('documents').upsert(row, { onConflict: conflictTarget }).select().single()
-    : supabase.from('documents').upsert(row, { onConflict: 'category,abbreviation' }).select().single();
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+  if (row.drive_file_id) {
+    const rows = await sql`
+      insert into documents (category, title, abbreviation, translation, drive_file_id, page_count, ingested, chunk_count)
+      values (${row.category}, ${row.title}, ${row.abbreviation}, ${row.translation}, ${row.drive_file_id}, ${row.page_count}, false, 0)
+      on conflict (drive_file_id) do update set page_count = excluded.page_count
+      returning id, title, abbreviation
+    `;
+    return rows[0];
+  }
+  const rows = await sql`
+    insert into documents (category, title, abbreviation, translation, page_count, ingested, chunk_count)
+    values (${row.category}, ${row.title}, ${row.abbreviation}, ${row.translation}, ${row.page_count}, false, 0)
+    on conflict (category, abbreviation) do update set page_count = excluded.page_count
+    returning id, title, abbreviation
+  `;
+  return rows[0];
 }
 
 async function processFile(filePath, category) {
@@ -164,13 +176,11 @@ async function processFile(filePath, category) {
     };
   }
 
-  const existing = await supabase
-    .from('documents')
-    .select('id, ingested')
-    .eq('drive_file_id', docMeta.drive_file_id)
-    .maybeSingle();
+  const existing = docMeta.drive_file_id
+    ? await sql`select id, ingested from documents where drive_file_id = ${docMeta.drive_file_id} limit 1`
+    : await sql`select id, ingested from documents where category = ${docMeta.category} and abbreviation = ${docMeta.abbreviation} limit 1`;
 
-  if (existing.data?.ingested && !force) {
+  if (existing[0]?.ingested && !force) {
     console.log('  Already ingested, skipping (use --force to re-ingest).');
     return;
   }
@@ -179,16 +189,16 @@ async function processFile(filePath, category) {
   const pages = await extractPages(buffer);
   console.log(`  Extracted ${pages.length} pages.`);
 
-  const document = await upsertDocument({ ...docMeta, page_count: pages.length, ingested: false, chunk_count: 0 });
+  const document = await upsertDocument({ ...docMeta, page_count: pages.length });
 
   // Clear any previous chunks before re-ingesting.
-  await supabase.from('document_chunks').delete().eq('document_id', document.id);
+  await sql`delete from document_chunks where document_id = ${document.id}`;
 
   const chunkRecords = [];
   pages.forEach((pageText, pageIdx) => {
     const pieces = chunkText(pageText);
-    pieces.forEach((content, i) => {
-      chunkRecords.push({ content, page_number: pageIdx + 1, chunk_index: chunkRecords.length, _localIdx: i });
+    pieces.forEach((content) => {
+      chunkRecords.push({ content, page_number: pageIdx + 1, chunk_index: chunkRecords.length });
     });
   });
 
@@ -199,24 +209,19 @@ async function processFile(filePath, category) {
   for (let i = 0; i < chunkRecords.length; i += BATCH) {
     const batch = chunkRecords.slice(i, i + BATCH);
     const embeddings = await embedBatch(batch.map((c) => c.content));
-    const rows = batch.map((c, j) => ({
-      document_id: document.id,
-      content: c.content,
-      page_number: c.page_number,
-      chunk_index: c.chunk_index,
-      embedding: embeddings[j],
-    }));
-    const { error } = await supabase.from('document_chunks').insert(rows);
-    if (error) throw error;
-    embedded += rows.length;
+    for (let j = 0; j < batch.length; j++) {
+      const c = batch[j];
+      await sql`
+        insert into document_chunks (document_id, content, page_number, chunk_index, embedding)
+        values (${document.id}, ${c.content}, ${c.page_number}, ${c.chunk_index}, ${toVectorLiteral(embeddings[j])}::vector)
+      `;
+    }
+    embedded += batch.length;
     process.stdout.write(`\r  Embedded ${embedded}/${chunkRecords.length}`);
   }
   console.log('');
 
-  await supabase
-    .from('documents')
-    .update({ ingested: true, chunk_count: chunkRecords.length })
-    .eq('id', document.id);
+  await sql`update documents set ingested = true, chunk_count = ${chunkRecords.length} where id = ${document.id}`;
 
   console.log(`  Done: "${document.title}" (${document.abbreviation ?? ''})`);
 }

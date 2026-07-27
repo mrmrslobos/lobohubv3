@@ -6,54 +6,58 @@ the source.
 
 Berea is a **retrieval-augmented** study companion: it never answers from memory alone. Every
 question is embedded, matched against your library of PDFs (stored as searchable passages in
-Supabase), and the retrieved excerpts are handed to Gemini along with a pastoral system prompt.
-The answer quotes and cites what it actually found.
+Neon Postgres via `pgvector`), and the retrieved excerpts are handed to Gemini along with a
+pastoral system prompt. The answer quotes and cites what it actually found.
 
 > Berea is a study companion, not a replacement for your pastor or conference pastoral care —
 > the app says so up front, especially for anything urgent (abuse, self-harm, crisis).
 
 ## Architecture
 
-- **Frontend** — React + Vite + TypeScript + Tailwind (this repo).
-- **Auth & data** — Supabase (Postgres + `pgvector`, Auth, Edge Functions).
-- **AI** — Gemini `text-embedding-004` for embeddings, `gemini-2.5-flash` for answers. All calls
-  happen server-side in the `guidance` Edge Function — the Gemini key never reaches the browser.
+- **Frontend** — React + Vite + TypeScript + Tailwind (this repo), deployed as a static build on
+  **Vercel**.
+- **Backend** — Vercel Serverless Functions under `api/` (Node.js runtime). There's no separate
+  server to run — Vercel builds each file in `api/` into its own function automatically.
+- **Database** — **Neon** Postgres with the `pgvector` extension. Stores documents, embedded
+  passages, users, sessions, and chat history. No ORM — just tagged-template SQL via
+  `@neondatabase/serverless`.
+- **Auth** — custom, cookie-based sessions (bcrypt-hashed passwords, opaque session tokens
+  stored hashed in `sessions`, httpOnly cookie). Neon doesn't ship an auth service the way
+  Supabase does, so `lib/auth.ts` + `api/auth/*` implement a deliberately small one.
+- **AI** — Gemini `text-embedding-004` for embeddings, `gemini-2.5-flash` for answers. Both run
+  inside `api/guidance.ts` — the Gemini key never reaches the browser.
 - **Ingestion** — a local Node script (`npm run ingest`) that extracts text from your PDFs,
-  chunks it, embeds each chunk, and upserts it into Supabase. This runs on your machine (or CI),
-  not in the deployed app, since processing ~100 books is a one-time, API-cost-bearing job you
-  should control directly.
+  chunks it, embeds each chunk, and upserts it into Neon. This runs on your machine (or CI), not
+  in the deployed app, since processing ~100 books is a one-time, API-cost-bearing job you should
+  control directly.
 
-## 1. Set up Supabase
+## 1. Create the Neon database
 
-1. Create a Supabase project (or reuse one) and note its **Project URL**, **anon key**, and
-   **service role key** (Project Settings → API).
-2. Apply the schema in [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql):
-   - Easiest: paste the file into the Supabase SQL Editor and run it.
-   - Or, with the Supabase CLI: `supabase link --project-ref YOUR_REF && supabase db push`.
-3. Deploy the RAG edge function and set its secret:
+1. Create a project at [neon.tech](https://neon.tech) (or reuse one).
+2. Copy the **pooled** connection string (Dashboard → Connection Details → check "Pooled
+   connection") — Vercel functions are serverless, so you want PgBouncer pooling, not a direct
+   connection.
+3. Apply the schema:
    ```sh
-   supabase functions deploy guidance
-   supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+   cp .env.example .env.local   # fill in DATABASE_URL
+   npm install
+   npm run migrate
    ```
-   Get a Gemini key at https://aistudio.google.com/apikey.
+   This runs [`migrations/0001_init.sql`](migrations/0001_init.sql), which enables `pgvector`
+   and creates `users`, `sessions`, `documents`, `document_chunks`, `conversations`, `messages`.
 
-## 2. Configure the app
+## 2. Configure secrets
 
-```sh
-cp .env.example .env.local
-```
-
-Fill in `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (frontend) and
-`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `GEMINI_API_KEY` (ingestion scripts only — keep
-these out of anything you deploy publicly).
+Add `GEMINI_API_KEY` to `.env.local` too (get one at
+https://aistudio.google.com/apikey) — the ingestion script and the local dev server both need
+it.
 
 ```sh
-npm install
 npm run dev
 ```
 
-Sign up with an email/password — the first user isn't special, so promote yourself in the
-`profiles` table (`role = 'admin'`) if you want an admin marker later.
+Sign up with an email/password from the app UI — the first user isn't special; promote yourself
+to `role = 'admin'` directly in the `users` table later if you want an admin marker.
 
 ## 3. Populate the library
 
@@ -91,16 +95,37 @@ npm run seed:library
 Once ingestion finishes for a document, it flips to "Ready" on the Library page and its passages
 become searchable from the guidance chat.
 
+## 4. Deploy to Vercel
+
+1. Push this repo to GitHub and import it in Vercel (Framework Preset: Vite — Vercel
+   auto-detects it and picks up `api/` as serverless functions with no extra config).
+2. In the Vercel project's Environment Variables, set:
+   - `DATABASE_URL` — the same Neon pooled connection string
+   - `GEMINI_API_KEY`
+3. Deploy. There's nothing else to configure — the frontend and the `api/` functions ship
+   together from the same build.
+
 ## Notes on translations
 
 KJV is public domain. NLT and ESV are copyrighted (Tyndale House / Crossway); the app only
-stores and serves the text you already licensed/own a copy of via your own Drive and Supabase
+stores and serves the text you already licensed/own a copy of via your own Drive and Neon
 project — nothing is redistributed publicly.
 
 ## Local development
 
 ```sh
-npm run dev       # start the app
+npm run dev       # start the Vite dev server (frontend only — see below)
 npm run build     # production build
 npm run preview   # preview the production build
 ```
+
+`npm run dev` serves the frontend but does **not** run the `api/` functions — for those, use the
+[Vercel CLI](https://vercel.com/docs/cli) locally:
+
+```sh
+npm i -g vercel
+vercel dev
+```
+
+which serves both the Vite frontend and the `api/` serverless functions together, using the
+same `.env.local`.

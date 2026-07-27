@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/apiClient';
 import type { DocumentCategory, LibraryDocument } from '../types';
 
 const CATEGORY_META: Record<DocumentCategory, { label: string; icon: string }> = {
@@ -14,16 +14,24 @@ const Library: React.FC = () => {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    supabase
-      .from('documents')
-      .select(
-        'id, category, title, abbreviation, translation, author, source_note, page_count, ingested, chunk_count, created_at'
-      )
-      .order('title', { ascending: true })
-      .then(({ data }) => {
-        setDocs((data as LibraryDocument[]) ?? []);
-        setLoading(false);
-      });
+    api.documents().then(({ documents }) => {
+      setDocs(
+        documents.map((d) => ({
+          id: d.id,
+          category: d.category,
+          title: d.title,
+          abbreviation: d.abbreviation,
+          translation: d.translation,
+          author: d.author,
+          source_note: d.source_note,
+          page_count: d.page_count,
+          ingested: d.ingested,
+          chunk_count: d.chunk_count,
+          created_at: d.created_at,
+        }))
+      );
+      setLoading(false);
+    });
   }, []);
 
   const grouped = useMemo(() => {
