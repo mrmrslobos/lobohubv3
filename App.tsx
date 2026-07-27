@@ -60,19 +60,26 @@ const MainContent: React.FC = () => {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 bg-ink-900 px-4 py-3 md:hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex items-center gap-2.5 border-b border-hair px-3 py-2.5 md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
-            className="rounded-full p-1.5 text-ink-200 hover:bg-ink-800"
+            className="rounded-md p-1 text-ink-200 hover:bg-ink-800"
           >
             <IconMenu className="h-5 w-5" />
           </button>
-          <span className="text-lg font-semibold text-ink-100">Berea</span>
+          <span className="text-sm font-semibold tracking-tight text-ink-100">Berea</span>
         </div>
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="mx-auto h-full max-w-5xl">{renderView()}</div>
+        {/* Guidance runs its own full-height two-pane layout; the rest scroll in a measured column. */}
+        <main className="min-h-0 flex-1 overflow-hidden">
+          {view === 'guidance' ? (
+            renderView()
+          ) : (
+            <div className="h-full overflow-y-auto px-5 py-6">
+              <div className="mx-auto max-w-5xl">{renderView()}</div>
+            </div>
+          )}
         </main>
       </div>
     </div>

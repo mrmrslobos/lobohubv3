@@ -11,36 +11,43 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Sora', 'system-ui', 'sans-serif'],
+              sans: ['"Geist Sans"', 'system-ui', 'sans-serif'],
+              serif: ['"Source Serif 4"', 'Georgia', 'serif'],
             },
             colors: {
               ink: {
-                950: '#101114',
-                900: '#17181C',
-                800: '#1E2025',
-                600: '#24262B',
-                400: '#7C7F87',
-                200: '#D7D8DC',
-                100: '#F5F6F8',
+                950: '#08090A',
+                900: '#0E0F11',
+                800: '#151619',
+                700: '#1C1E22',
+                400: '#8A8F98',
+                500: '#61656D',
+                200: '#C2C5CB',
+                100: '#EDEDEF',
+              },
+              hair: {
+                DEFAULT: 'rgba(255,255,255,0.075)',
+                strong: 'rgba(255,255,255,0.12)',
               },
               accent: {
-                DEFAULT: '#4F8CFF',
-                on: '#0B0D12',
+                DEFAULT: '#7C6BF5',
+                soft: 'rgba(124,107,245,0.12)',
+                on: '#FFFFFF',
               },
-              good: '#6FCF97',
+              good: '#4ADE80',
             },
           },
         },
       };
     </script>
     <style>
-      html { scroll-behavior: smooth; }
+      html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
       ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: #4F8CFF; border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 9999px; }
       ::-webkit-scrollbar-track { background: transparent; }
     </style>
   </head>
-  <body class="bg-ink-950 text-ink-200 font-sans">
+  <body class="bg-ink-950 font-sans text-ink-200 antialiased">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
