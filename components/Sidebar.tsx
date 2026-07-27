@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from './AuthContext';
 
-export type View = 'guidance' | 'library' | 'history';
+export type View = 'guidance' | 'library' | 'history' | 'admin';
 
 interface SidebarProps {
   activeView: View;
@@ -18,6 +18,7 @@ const NAV_ITEMS: { id: View; label: string; icon: string }[] = [
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen, onClose }) => {
   const { user, signOut } = useAuth();
+  const navItems = user?.role === 'admin' ? [...NAV_ITEMS, { id: 'admin' as const, label: 'Admin', icon: '🛠️' }] : NAV_ITEMS;
 
   return (
     <>
@@ -49,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen, onC
         </div>
 
         <nav className="flex-1 space-y-1 px-3">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => {

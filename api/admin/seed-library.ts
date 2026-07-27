@@ -1,9 +1,7 @@
-// One-time admin endpoint: registers the full Berea library catalog (from
+// Admin endpoint: registers the full Berea library catalog (from
 // data/library-seed.mjs) as rows in `documents`, with ingested=false, so the
 // Library page shows everything immediately. Safe to call more than once —
-// it's an upsert. Requires being signed in (any account) since this app has
-// no separate admin role set up yet and this endpoint only ever inserts
-// harmless catalog metadata, never PDF content or credentials.
+// it's an upsert.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '../../lib/db.js';
 import { getSessionUser } from '../../lib/auth.js';
@@ -17,6 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = await getSessionUser(req);
   if (!user) {
     return res.status(401).json({ error: 'Sign in to the app first, then visit this endpoint.' });
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin only.' });
   }
 
   const rows = [

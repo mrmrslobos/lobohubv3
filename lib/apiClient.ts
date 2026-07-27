@@ -72,4 +72,27 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ question, conversationId, translation }),
     }),
+
+  seedLibrary: () => request<{ seeded: number }>('/api/admin/seed-library', { method: 'POST' }),
+
+  adminIngestStart: (documentId: string) =>
+    request<{ ok: true }>('/api/admin/ingest-start', {
+      method: 'POST',
+      body: JSON.stringify({ documentId }),
+    }),
+
+  adminIngestBatch: (
+    documentId: string,
+    chunks: { content: string; pageNumber: number | null; chunkIndex: number }[]
+  ) =>
+    request<{ inserted: number }>('/api/admin/ingest-batch', {
+      method: 'POST',
+      body: JSON.stringify({ documentId, chunks }),
+    }),
+
+  adminIngestFinish: (documentId: string, pageCount: number) =>
+    request<{ ok: true; chunkCount: number }>('/api/admin/ingest-finish', {
+      method: 'POST',
+      body: JSON.stringify({ documentId, pageCount }),
+    }),
 };

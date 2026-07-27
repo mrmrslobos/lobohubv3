@@ -17,6 +17,7 @@
     "@neondatabase/serverless": "^0.10.4",
     "bcryptjs": "^2.4.3",
     "cookie": "^0.7.2",
+    "pdfjs-dist": "^6.1.200",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
