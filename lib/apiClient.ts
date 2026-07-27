@@ -44,10 +44,10 @@ export interface RawMessageRow {
 }
 
 export const api = {
-  signUp: (email: string, password: string, displayName?: string) =>
+  signUp: (email: string, password: string, inviteCode: string, displayName?: string) =>
     request<{ user: Profile }>('/api/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, inviteCode, displayName }),
     }),
 
   signIn: (email: string, password: string) =>

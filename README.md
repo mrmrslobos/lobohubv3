@@ -22,9 +22,10 @@ pastoral system prompt. The answer quotes and cites what it actually found.
   passages, users, sessions, and chat history. No ORM — just tagged-template SQL via
   `@neondatabase/serverless`.
 - **Auth** — custom, cookie-based sessions (bcrypt-hashed passwords, opaque session tokens
-  stored hashed in `sessions`, httpOnly cookie). Neon doesn't ship an auth service the way
-  Supabase does, so `lib/auth.ts` + `api/auth/*` implement a deliberately small one.
-- **AI** — Gemini `text-embedding-004` for embeddings, `gemini-2.5-flash` for answers. Both run
+  stored hashed in `sessions`, httpOnly cookie), gated behind a shared invite code so sign-up
+  isn't open to anyone who finds the URL. Neon doesn't ship an auth service the way Supabase
+  does, so `lib/auth.ts` + `api/auth/*` implement a deliberately small one.
+- **AI** — Gemini `gemini-embedding-2` for embeddings, `gemini-2.5-flash` for answers. Both run
   inside `api/guidance.ts` — the Gemini key never reaches the browser.
 - **Ingestion** — a local Node script (`npm run ingest`) that extracts text from your PDFs,
   chunks it, embeds each chunk, and upserts it into Neon. This runs on your machine (or CI), not
@@ -52,12 +53,17 @@ Add `GEMINI_API_KEY` to `.env.local` too (get one at
 https://aistudio.google.com/apikey) — the ingestion script and the local dev server both need
 it.
 
+Also set `SIGNUP_INVITE_CODE` to a passphrase of your choosing — sign-up requires it (and is
+disabled entirely if it's unset), so the app isn't open to anyone who stumbles on the URL. Share
+the code directly with the elders you want using it.
+
 ```sh
 npm run dev
 ```
 
-Sign up with an email/password from the app UI — the first user isn't special; promote yourself
-to `role = 'admin'` directly in the `users` table later if you want an admin marker.
+Sign up with an email/password (and the invite code) from the app UI — the first user isn't
+special; promote yourself to `role = 'admin'` directly in the `users` table later if you want an
+admin marker.
 
 ## 3. Populate the library
 
@@ -102,6 +108,8 @@ become searchable from the guidance chat.
 2. In the Vercel project's Environment Variables, set:
    - `DATABASE_URL` — the same Neon pooled connection string
    - `GEMINI_API_KEY`
+   - `SIGNUP_INVITE_CODE` — required for sign-up to work at all; give this code only to the
+     elders you want using the app
 3. Deploy. There's nothing else to configure — the frontend and the `api/` functions ship
    together from the same build.
 
