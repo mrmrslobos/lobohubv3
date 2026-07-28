@@ -6,7 +6,18 @@ import { useAuth } from './AuthContext';
 import type { ChatMessage, Citation } from '../types';
 import { IconChevron, IconSend } from './icons';
 
-const TRANSLATIONS = ['KJV', 'NLT', 'ESV'] as const;
+const TRANSLATIONS = ['ESV', 'NLT', 'KJV'] as const;
+type Translation = (typeof TRANSLATIONS)[number];
+
+// This component unmounts whenever the elder switches views, so keeping the
+// choice in local state alone silently reverted it to the default every time.
+const TRANSLATION_KEY = 'berea.translation';
+
+function storedTranslation(): Translation {
+  if (typeof localStorage === 'undefined') return 'ESV';
+  const saved = localStorage.getItem(TRANSLATION_KEY);
+  return TRANSLATIONS.includes(saved as Translation) ? (saved as Translation) : 'ESV';
+}
 
 const CATEGORY_LABEL: Record<Citation['category'], string> = {
   bible: 'Scripture',
@@ -67,7 +78,7 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
   const stats = useLibraryStats();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [translation, setTranslation] = useState<(typeof TRANSLATIONS)[number]>('KJV');
+  const [translation, setTranslation] = useState<Translation>(storedTranslation);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -144,7 +155,11 @@ const GuidanceChat: React.FC<GuidanceChatProps> = ({ conversationId, onConversat
           <div className="relative ml-auto shrink-0">
             <select
               value={translation}
-              onChange={(e) => setTranslation(e.target.value as (typeof TRANSLATIONS)[number])}
+              onChange={(e) => {
+                const next = e.target.value as Translation;
+                setTranslation(next);
+                localStorage.setItem(TRANSLATION_KEY, next);
+              }}
               aria-label="Bible translation"
               className="appearance-none rounded-md border border-hair bg-transparent py-1 pl-2.5 pr-7 text-[11px] font-medium text-ink-200 outline-none focus:border-hair-strong"
             >
