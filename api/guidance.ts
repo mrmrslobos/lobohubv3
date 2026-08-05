@@ -15,10 +15,22 @@ const GENERATION_MODEL = 'gemini-2.5-flash';
 // user/assistant pair boundary (each turn inserts exactly one of each).
 const HISTORY_MESSAGE_LIMIT = 10;
 
-const SYSTEM_PROMPT = `You are Berea, a study companion mentoring a local Seventh-day Adventist \
-church elder. You answer with the warmth, patience, and doctrinal grounding of an experienced \
-SDA pastor, but you are not a substitute for one — you say so plainly when a situation calls for \
-real, in-person pastoral care.
+const SYSTEM_PROMPT = `You are Berea, a study companion for a local Seventh-day Adventist church \
+elder. You answer with the judgement of an experienced SDA pastor, but you are not a substitute \
+for one — say so plainly when a situation calls for real, in-person pastoral care.
+
+How you sound:
+- Write in plain, current English — the way a thoughtful pastor would actually talk to a colleague \
+today. Contemporary vocabulary, normal sentence rhythm, contractions where they fit.
+- Do not write in an archaic or churchy register. Avoid "brethren", "beloved", "let us", "shall", \
+"one must", "it behooves", "dear elder", and similar. You will be quoting Jacobean and \
+19th-century sources — do not let their cadence bleed into your own prose.
+- Be direct. Open with the actual answer or the first practical move, then support it. No \
+throat-clearing ("What a thoughtful question…"), no restating the question back.
+- Keep it tight — short paragraphs, usually 150–250 words unless the question genuinely needs \
+more. The elder is busy and often needs this mid-conversation.
+- Warm, plain-spoken, and never preachy toward the person asking. They are a colleague, not a \
+congregant.
 
 How you answer:
 - Ground every substantive claim in the excerpts provided below (Scripture, Ellen G. White's \
@@ -40,9 +52,7 @@ Adventist practice differs from other traditions (Sabbath, state of the dead, sa
 diet, etc.), explain the SDA position clearly and kindly rather than debating it.
 - For anything involving abuse, suicide, self-harm, medical emergencies, or immediate danger: \
 lead with safety, urge contacting local emergency services and the conference/mission pastoral \
-care line right away, and keep any spiritual counsel secondary to that.
-- Keep a gentle, unhurried, encouraging tone — the way a wise elder-of-elders would speak, not a \
-search engine.`;
+care line right away, and keep any spiritual counsel secondary to that.`;
 
 interface MatchRow {
   chunk_id: string;
@@ -142,23 +152,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const queryEmbedding = await embed(retrievalQuery);
     const vectorLiteral = toVectorLiteral(queryEmbedding);
 
-    const matches = (await sql`
-      select
-        c.id as chunk_id,
-        c.document_id,
-        c.content,
-        c.page_number,
-        1 - (c.embedding <=> ${vectorLiteral}::vector) as similarity,
-        d.title,
-        d.abbreviation,
-        d.category
-      from document_chunks c
-      join documents d on d.id = c.document_id
-      order by c.embedding <=> ${vectorLiteral}::vector
-      limit 8
-    `) as MatchRow[];
+    const requestedTranslation = typeof translation === 'string' ? translation : 'ESV';
 
-    const preferredTranslation = translation ?? 'KJV';
+    // All three translations sit in the same vector space and say much the same
+    // thing, so an unfiltered nearest-neighbour search returns whichever version
+    // happens to embed closest — the elder's choice would never actually bind.
+    // Restrict Scripture to the requested translation, but only once we know it's
+    // been ingested, so picking one that isn't loaded yet doesn't silently drop
+    // Scripture out of the answer entirely.
+    const available = (await sql`
+      select abbreviation from documents
+      where category = 'bible' and ingested = true and abbreviation is not null
+      order by abbreviation
+    `) as { abbreviation: string }[];
+
+    // Pin Scripture to one translation: the requested one when it's loaded,
+    // otherwise whichever is, so the excerpts never silently mix versions and
+    // the note below stays truthful. Null only when no Bible is ingested yet.
+    const usedTranslation = available.some((r) => r.abbreviation === requestedTranslation)
+      ? requestedTranslation
+      : available[0]?.abbreviation ?? null;
+
+    const matches = (usedTranslation
+      ? await sql`
+          select
+            c.id as chunk_id, c.document_id, c.content, c.page_number,
+            1 - (c.embedding <=> ${vectorLiteral}::vector) as similarity,
+            d.title, d.abbreviation, d.category
+          from document_chunks c
+          join documents d on d.id = c.document_id
+          where d.category <> 'bible' or d.abbreviation = ${usedTranslation}
+          order by c.embedding <=> ${vectorLiteral}::vector
+          limit 8
+        `
+      : await sql`
+          select
+            c.id as chunk_id, c.document_id, c.content, c.page_number,
+            1 - (c.embedding <=> ${vectorLiteral}::vector) as similarity,
+            d.title, d.abbreviation, d.category
+          from document_chunks c
+          join documents d on d.id = c.document_id
+          order by c.embedding <=> ${vectorLiteral}::vector
+          limit 8
+        `) as MatchRow[];
+
     const sourceBlock = matches.length
       ? matches
           .map((r, i) => {
@@ -169,9 +206,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .join('\n\n')
       : '(No matching excerpts were found in the library for this question.)';
 
-    const finalTurnText = `The elder's preferred Bible translation is ${preferredTranslation}; use it when \
-quoting Scripture if a matching excerpt is in that translation, otherwise use whatever translation the \
-excerpt is in and say which one.
+    const translationNote = usedTranslation
+      ? `Scripture excerpts below are from the ${usedTranslation}. Quote them as they appear — don't \
+substitute wording from another translation.${
+          usedTranslation === requestedTranslation
+            ? ''
+            : ` The elder asked for the ${requestedTranslation}, which isn't loaded in this library yet; \
+say so briefly if you quote Scripture.`
+        }`
+      : 'No Bible translation has been loaded into this library yet — do not quote Scripture as if it were retrieved.';
+
+    const finalTurnText = `${translationNote}
 
 RETRIEVED EXCERPTS:
 ${sourceBlock}
